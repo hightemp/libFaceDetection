@@ -20,35 +20,35 @@ class Data
   public $aSubsets = [];
   public $aStumps = [];
   
-  public function fnRead($aNodes)
+  public function fnRead($oNode)
   {
     $THRESHOLD_EPS = 1e-5;
     
-    $sStageTypeStr = $aNodes->stageType->__toString();
+    $sStageTypeStr = $oNode->stageType->__toString();
     if ($sStageTypeStr == 'BOOST')
       $this->iStageType = 0;
     else
       return false;
     
-    $sFeatureTypeStr = $aNodes->featureType->__toString();
+    $sFeatureTypeStr = $oNode->featureType->__toString();
     if (isset(FeatureEvaluator::$aTypes[$sFeatureTypeStr])) {
       $this->iFeatureType = FeatureEvaluator::$aTypes[$sFeatureTypeStr];
     } else
       return false;
     
-    $this->aOrigWinSize['width'] = $aNodes->width->__toString();
-    $this->aOrigWinSize['height'] = $aNodes->height->__toString();
+    $this->aOrigWinSize['width'] = $oNode->width->__toString();
+    $this->aOrigWinSize['height'] = $oNode->height->__toString();
     if (!($this->aOrigWinSize['height'] > 0 && $this->aOrigWinSize['width'] > 0))
       throw new Exception("");
     
-    if (!$aNodes->featureParams->count())
+    if (!$oNode->featureParams->count())
       return false;
     
-    $this->iNcategories = $aNodes->featureParams->maxCatCount->__toString();
+    $this->iNcategories = $oNode->featureParams->maxCatCount->__toString();
     $iSubsetSize = ($this->iNcategories + 31)/32;
     $iNodeStep = 3 + ( $this->iNcategories>0 ? $iSubsetSize : 1 );
     
-    if (!$aNodes->stages->count())
+    if (!$oNode->stages->count())
       return false;
     
     $this->aClassifiers = [];
@@ -58,7 +58,7 @@ class Data
     $iMinNodesPerTree = PHP_INT_MAX;
     $iMaxNodesPerTree = 0;
     
-    foreach ($aNodes->stages->_ as $aStageNode) {
+    foreach ($oNode->stages->_ as $aStageNode) {
       $aStage = [];
       $aStage['threshold'] = $aStageNode->stageThreshold->__toString() - $THRESHOLD_EPS;
 

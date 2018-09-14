@@ -61,7 +61,7 @@ class CascadeClassifier
       throw new Exception("There is no class for {$this->sType} type");
     
     $this->oFeatureEvaluator = new $sClassName();
-    $this->oFeatureEvaluator->fnRead($this->aCascadeNodes, $this->oData->aOrigWinSize);
+    $this->oFeatureEvaluator->fnRead($this->aCascadeNodes->cascade->features, $this->oData->aOrigWinSize);
   }
   
   public function fnDetectMultiScale($hImageResource, 

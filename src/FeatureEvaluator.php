@@ -64,6 +64,12 @@ class FeatureEvaluator
   
   function __construct() 
   {
+    
+  }
+  
+  public function fnSetWindow($aPt, $iScaleIdx)
+  {
+    return true;
   }
   
   public function fnGetMats()
@@ -87,7 +93,7 @@ class FeatureEvaluator
     return $this->aScaleData[$iScaleIdx];
   }
   
-  public function fnRead($aNodes, $iOrigWinSize)
+  public function fnRead($oNode, $iOrigWinSize)
   {
     $this->aOrigWinSize = $iOrigWinSize;
     $this->aLocalSize = $this->aLbufSize = ['width' => 0, 'height' => 0];
