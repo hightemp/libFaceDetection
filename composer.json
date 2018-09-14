@@ -1,0 +1,10 @@
+{
+    "name": "hightemp/lib-face-detection",
+    "description": "Face detection library",
+    "type": "library",
+    "license": "MIT",
+    "require": {},
+    "autoload": {
+      "psr-4": {"libFaceDetection\\": "src/"}
+    }  
+}
