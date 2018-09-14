@@ -47,10 +47,10 @@ class FeatureEvaluator
   //virtual void computeChannels( int, InputArray ) {}
   //virtual void computeOptFeatures() {}
 
-  protected $aOrigWinSize;
-  protected $aSbufSize;
-  protected $aLocalSize;
-  protected $aLbufSize;
+  protected $aOrigWinSize = [ 'width' => 0, 'height' => 0 ];
+  protected $aSbufSize = [ 'width' => 0, 'height' => 0 ];
+  protected $aLocalSize = [ 'width' => 0, 'height' => 0 ];
+  protected $aLbufSize = [ 'width' => 0, 'height' => 0 ];
   
   protected $iNchannels;
   protected $oSbuf;
@@ -104,9 +104,6 @@ class FeatureEvaluator
   
   public function fnUpdateScaleData($aImgsz, &$aScales)
   {
-    if (empty($this->aScaleData))
-      $this->aScaleData = [];
-
     $iI;
     $iNscales = count($aScales);
     
@@ -116,11 +113,12 @@ class FeatureEvaluator
     $iLayer_dy = 0;
     $aLayer_ofs = [ 'x' => 0, 'y' => 0];
     $aPrevBufSize = $this->aSbufSize;
-    $this->aSbufSize['width'] = max($this->aSbufSize['width'], (int)alignSize(round($aImgsz['width']/$aScales[0]) + 31, 32));
+    $this->aSbufSize['width'] = max($this->aSbufSize['width'], Utilities::fnAlignSize(round($aImgsz['width']/$aScales[0]) + 31, 32));
     $bRecalcOptFeatures = $bRecalcOptFeatures || $this->aSbufSize['width'] != $aPrevBufSize['width'];
 
     for ($iI = 0; $iI < $iNscales; $iI++ ) {
-      $oS = $this->aScaleData[$iI];
+      $this->aScaleData[$iI] = new ScaleData();
+      $oS = &$this->aScaleData[$iI];
       
       if (!$bRecalcOptFeatures && abs($oS->scale - $aScales[$iI]) > FLT_EPSILON*100*$aScales[$iI])
         $bRecalcOptFeatures = true;
@@ -153,7 +151,7 @@ class FeatureEvaluator
     return $bRecalcOptFeatures;
   } 
   
-  public function fnSetImage(InputArray $oImage, $aScales)
+  public function fnSetImage(InputArray $oImage, &$aScales)
   {
     //CV_INSTRUMENT_REGION()
 
@@ -169,8 +167,8 @@ class FeatureEvaluator
     
     $aSz0 = $this->aScaleData[0]->szi;
     $aSz0 = [ 
-      'width' => max($this->oRbuf->cols, Utilities::fnAlignSize($aSz0['width'], 16)), 
-      'height' => max($this->oRbuf->rows, $aSz0['height'])
+      'width' => max($this->oRbuf->iCols, Utilities::fnAlignSize($aSz0['width'], 16)), 
+      'height' => max($this->oRbuf->iRows, $aSz0['height'])
     ];
     
     if ($bRecalcOptFeatures) {

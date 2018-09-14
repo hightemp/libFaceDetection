@@ -91,4 +91,35 @@ class HaarEvaluator extends FeatureEvaluator
 
     return true;
   }
+  
+  public function fnSetWindow($aPt, $iScaleIdx) 
+  {
+    $oS = $this->fnGetScaleData($iScaleIdx);
+
+    if( $aPt['x'] < 0 || $aPt['y'] < 0 ||
+        $aPt['x'] + $this->aOrigWinSize['width'] >= $oS->szi['width'] ||
+        $aPt['y'] + $this->aOrigWinSize['height'] >= $oS->szi['height'] )
+      return false;
+
+    /*
+    pwin = &sbuf.at<int>(pt) + $oS->aLayer_ofs;
+    const int* pq = (const int*)(pwin + sqofs);
+    int valsum = CALC_SUM_OFS(nofs, pwin);
+    unsigned valsqsum = (unsigned)(CALC_SUM_OFS(nofs, pq));
+
+    double area = normrect.area();
+    double nf = area * valsqsum - (double)valsum * valsum;
+    if( nf > 0. )
+    {
+      nf = std::sqrt(nf);
+      varianceNormFactor = (float)(1./nf);
+      return area*varianceNormFactor < 1e-1;
+    }
+    else
+    {
+      varianceNormFactor = 1.f;
+      return false;
+    }
+     */
+  }
 }

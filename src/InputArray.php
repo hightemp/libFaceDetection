@@ -35,7 +35,12 @@ class InputArray
   function __construct(...$aArguments) 
   {
     if (is_resource($aArguments[0])) {
+      $iCols = imagesx($aArguments[0]);
+      $iRows = imagesy($aArguments[0]);
       
+      $this->oObj = new Mat($iCols, $iRows);
+      
+      $this->iFlags = self::MAT;
     }
   }
   
@@ -52,7 +57,7 @@ class InputArray
       case self::MAT:
       case self::UMAT:
       case self::EXPR:
-        return $oObj->fnSize();
+        return $this->oObj->fnSize();
     }
     
     throw new Exception("Unknown/unsupported array type");
@@ -76,6 +81,11 @@ class InputArray
   public function fnGetMat($iIdx=-1)
   {
     
+  }
+
+  public function fnIsMat()
+  {
+    return $this->fnKind() == self::MAT;
   }
   /*
   Mat getMat_(int idx=-1) const;
