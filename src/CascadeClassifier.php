@@ -7,6 +7,7 @@ use libFaceDetection\FeatureEvaluator;
 use libFaceDetection\Data;
 use libFaceDetection\InputArray;
 use libFaceDetection\Mat;
+use libFaceDetection\Rect;
 
 class MaskGenerator {
   public function fnGenerateMask($oSrc) {}
@@ -19,6 +20,7 @@ class CascadeClassifier
   protected $oData;
   protected $sType;
   protected $oFeatureEvaluator;
+  protected $oOldCascade;
   public $oMaskGenerator;
   
   /*
@@ -156,12 +158,12 @@ class CascadeClassifier
     $iI;
     $iNscales = count($aScales);
     $aStripeSizes = [];
-    $oS = $this->oFeatureEvaluator->fnGetScaleData(0);
-    $aSzw = $oS->fnGetWorkingSize($this->oData->aOrigWinSize);
+    $aS = $this->oFeatureEvaluator->fnGetScaleData();
+    $aSzw = $aS[0]->fnGetWorkingSize($this->oData->aOrigWinSize);
     $iNstripes = ceil($aSzw['width']/32.);
     for ($iI = 0; $iI < $iNscales; $iI++) {
-      $aSzw = $oS[$iI]->fnGetWorkingSize($this->oData->aOrigWinSize);
-      $aStripeSizes[$iI] = max(($aSzw['height']/$oS[$iI]->ystep + $iNstripes-1)/$iNstripes, 1)*$oS[$iI]->ystep;
+      $aSzw = $aS[$iI]->fnGetWorkingSize($this->oData->aOrigWinSize);
+      $aStripeSizes[$iI] = max(($aSzw['height']/$aS[$iI]->ystep + $iNstripes-1)/$iNstripes, 1)*$aS[$iI]->ystep;
     }
 
     /*
@@ -171,5 +173,132 @@ class CascadeClassifier
                                      outputRejectLevels, currentMask, &mtx);
     parallel_for_(Range(0, nstripes), invoker);
      */
+    
+    $fGypWeight = 0.;
+    $aOrigWinSize = $this->oData->aOrigWinSize;
+    $aRange = [ 'start' => 0, 'end' => $iNstripes ];
+
+    for($iScaleIdx = 0; $iScaleIdx < $iNscales; $iScaleIdx++ ) {
+      $oS = $aS[$iScaleIdx];
+      $fScalingFactor = $oS->scale;
+      $iYStep = $oS->ystep;
+      $iStripeSize = $aStripeSizes[$iScaleIdx];
+      $iY0 = $aRange['start']*$iStripeSize;
+      $aSzw = $oS->fnGetWorkingSize($aOrigWinSize);
+      $iY1 = min($aRange['end']*$iStripeSize, $aSzw['height']);
+      
+      $aWinSize = [ 
+        'width' => round($aOrigWinSize['width'] * $fScalingFactor),
+        'height' => round($aOrigWinSize['height'] * $fScalingFactor),
+      ];
+
+      for ($iY = $iY0; $iY < $iY1; $iY += $iYStep) {
+        for ($iX = 0; $iX < $aSzw['width']; $iX += $iYStep) {
+          $iResult = $this->fnRunAt([ 'x' => $iX, 'y' => $iY], $iScaleIdx, $fGypWeight);
+          if ($aRejectLevels) {
+            if ($iResult == 1)
+              $iResult = -count($this->oData->aStages);
+            
+            if (count($this->oData->aStages) + $iResult == 0) {
+              //mtx->lock();
+              array_push(
+                $aObjects, 
+                new Rect(
+                  round($iX*$fScalingFactor),
+                  round($iY*$fScalingFactor),
+                  $aWinSize['width'],
+                  $aWinSize['height']
+                )
+              );
+              array_push($aRejectLevels, -$iResult);
+              array_push($aLevelWeights, $fGypWeight);
+              //mtx->unlock();
+            }
+          } else if($iResult > 0) {
+            //mtx->lock();
+            array_push(
+              $aObjects, 
+              new Rect(
+                round($iX*$fScalingFactor),
+                round($iY*$fScalingFactor),
+                $aWinSize['width'],
+                $aWinSize['height']
+              )
+            );
+            //mtx->unlock();
+          }
+          if ($iResult == 0)
+            $iX += $iYStep;
+        }
+      }
+    }
+  }
+  
+  public function fnRunAt($aPt, $iScaleIdx, &$fWeight)
+  {    
+    //CV_INSTRUMENT_REGION()
+    //$this->oFeatureEvaluator
+    //if (!oldCascade && isset(FeatureEvaluator::$aTypes[$this->sType]))
+    //  throw new Exception("");
+
+    if (!$this->oFeatureEvaluator->fnSetWindow($aPt, $iScaleIdx))
+      return -1;
+    
+    if ($this->oData->iMaxNodesPerTree == 1 ) {
+      if ($this->sType == 'HAAR')
+        return $this->fnPredictOrderedStump($fWeight);
+      elseif ($this->sType == 'LBP')
+        return $this->fnPredictCategoricalStump($fWeight);
+      else
+        return -2;
+    } else {
+      if ($this->sType == 'HAAR')
+        return $this->fnPredictOrderedStump($fWeight);
+      elseif ($this->sType == 'LBP')
+        return $this->fnPredictCategoricalStump($fWeight);
+      else
+        return -2;
+    }
+  }
+  
+  public function fnPredictOrderedStump(&$fWeight)
+  {
+    //CV_INSTRUMENT_REGION()
+
+    if (!empty($this->oData->aStumps)) {
+      throw new Exception("");
+    }
+    
+    $aCascadeStumps = $this->oData->aStumps;
+    $aCascadeStages = $this->oData->aStages;
+    
+    $aCascadeStumpsIndex = 0;
+
+    $iNstages = count($aCascadeStages);
+    $fTmp = 0;
+
+    for ($iStageIdx = 0; $iStageIdx < $iNstages; $iStageIdx++ ) {
+      $oStage = $aCascadeStages[$iStageIdx];
+      $fTmp = 0;
+
+      $iNtrees = $oStage['ntrees'];
+      for ($iI = 0; $iI < $iNtrees; $iI++) {
+        $oStump = $aCascadeStumps[$aCascadeStumpsIndex + $iI];
+        $fValue = featureEvaluator($oStump['featureIdx']);
+        $fTmp += $fValue < $oStump['threshold'] ? $oStump['left'] : $oStump['right'];
+      }
+
+      if ($fTmp < $oStage['threshold']) {
+        return -$iStageIdx;
+      }
+      $aCascadeStumpsIndex += $iNtrees;
+    }
+
+    return 1;
+  }
+  
+  public function fnPredictCategoricalStump(&$fWeight)
+  {
+    
   }
 }

@@ -75,10 +75,14 @@ class FeatureEvaluator
     }
   }
   
-  public function fnGetScaleData($iScaleIdx)
+  public function fnGetScaleData($iScaleIdx=null)
   {
     if (0 <= $iScaleIdx && $iScaleIdx < count($this->aScaleData))
       throw new Exception("Wrong index");
+    
+    if (is_null($iScaleIdx)) {
+      return $this->aScaleData;
+    }
     
     return $this->aScaleData[$iScaleIdx];
   }
@@ -147,7 +151,7 @@ class FeatureEvaluator
   {
     //CV_INSTRUMENT_REGION()
 
-    $aImgsz = $oImage->size();
+    $aImgsz = $oImage->fnSize();
     
     $bRecalcOptFeatures = $this->fnUpdateScaleData($aImgsz, $aScales);
 

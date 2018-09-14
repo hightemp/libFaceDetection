@@ -4,7 +4,7 @@ namespace libFaceDetection;
 
 use Exception;
 
-class Mat
+class UMat
 {
   
 }
