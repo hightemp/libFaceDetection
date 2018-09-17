@@ -64,7 +64,11 @@ class FeatureEvaluator
   
   function __construct() 
   {
-    
+    $this->oSbuf = new Mat();
+    $this->oRbuf = new Mat();
+    $this->oUrbuf = new Mat();
+    $this->oUsbuf = new Mat();
+    $this->oUfbuf = new Mat();
   }
   
   public function fnSetWindow($aPt, $iScaleIdx)

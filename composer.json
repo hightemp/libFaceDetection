@@ -5,9 +5,6 @@
     "license": "MIT",
     "require": {},
     "autoload": {
-      "psr-4": {"libFaceDetection\\": "src/"},
-      "files": [
-        "src/function.php"
-      ]
+      "psr-4": {"libFaceDetection\\": "src/"}
     }  
 }
