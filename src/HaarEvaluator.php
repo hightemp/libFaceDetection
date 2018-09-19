@@ -4,6 +4,7 @@ namespace libFaceDetection\HaarEvaluator;
 
 use libFaceDetection\Rect;
 use libFaceDetection\Utilities;
+use libFaceDetection\OutputArray;
 
 class Feature
 {
@@ -139,6 +140,51 @@ class HaarEvaluator extends FeatureEvaluator
     return true;
   }
   
+  public function fnComputeChannels($iScaleIdx, $oImg)
+  {
+    //CV_INSTRUMENT_REGION()
+
+    $oS = $this->aScaleData[$iScaleIdx];
+    $iSqofs = $this->bHasTiltedFeatures ? 
+      $this->aSbufSize['width']*$this->aSbufSize['height'] * 2 : 
+      $this->aSbufSize['width']*$this->aSbufSize['height'];
+
+    if ($oImg->fnIsUMat()) {
+      $iSx = $oS->layer_ofs % $this->aSbufSize['width'];
+      $iSy = $oS->layer_ofs / $this->aSbufSize['width'];
+      $iSqy = $iSy + ($iSqofs / $this->aSbufSize['width']);
+      $oSum = new UMat($this->oUsbuf, new Rect($iSx, $iSy, $oS->szi['width'], $oS->szi['height']));
+      $oQsum = new UMat($this->oUsbuf, new Rect($iSx, $iSqy, $oS->szi['width'], $oS->szi['height']));
+
+      $oQsum->iFlags = $oQsum->iFlags & ~UMat::DEPTH_MASK | Utilities::CV_32S;
+
+      if ($this->bHasTiltedFeatures) {
+          $iSty = $iSy + ($this->iTofs / $this->aSbufSize['width']);
+          $oTilted = new UMat($this->oUsbuf, new Rect($iSx, $iSty, $oS->szi['width'], $oS->szi['height']));
+          integral($oImg, $oSum, $oQsum, $oTilted, Utilities::CV_32S, Utilities::CV_32S);
+      } else {
+          integral($oImg, $oSum, $oQsum, noArray(), Utilities::CV_32S, Utilities::CV_32S);
+      }
+    } else {
+      $oSum = new Mat($oS->szi, Utilities::CV_32S, $this->oSbuf->fnSetOffset($oS->layer_ofs), $this->oSbuf->oStep); //!!
+      $oQsum = new Mat($oS->szi, Utilities::CV_32S, $oSum->fnSetOffset($oS->layer_ofs), $this->oSbuf->oStep); //!!
+      /*
+      Mat sum(s.szi, CV_32S, sbuf.ptr<int>() + s.layer_ofs, sbuf.step);
+      Mat sqsum(s.szi, CV_32S, sum.ptr<int>() + sqofs, sbuf.step);
+       * 
+       */
+
+      if ($this->bHasTiltedFeatures)
+      {
+        $oTilted = new Mat($oS->szi, Utilities::CV_32S, $oSum->fnSetOffset($this->iTofs), $this->oSbuf->oStep);
+        //Mat tilted(s.szi, CV_32S, sum.ptr<int>() + tofs, sbuf.step);
+        integral($oImg, $oSum, $oQsum, $oTilted, Utilities::CV_32S, Utilities::CV_32S);
+      } else {
+        integral($oImg, $oSum, $oQsum, noArray(), Utilities::CV_32S, Utilities::CV_32S);
+      }
+    }
+  }
+  
   public function fnSetWindow($aPt, $iScaleIdx) 
   {
     $oS = $this->fnGetScaleData($iScaleIdx);
@@ -148,6 +194,22 @@ class HaarEvaluator extends FeatureEvaluator
         $aPt['y'] + $this->aOrigWinSize['height'] >= $oS->szi['height'] )
       return false;
 
+    $this->iPwin = $this->oSbuf->fnOffset($aPt, [$oS->layer_ofs]);
+    $iPq = $this->oSbuf->fnOffset($iPwin, [$this->iSqofs]);
+    $iValsum = Utilities::fnCalcSumOfs($this->aNofs, $this->oSbuf, $iPwin);
+    $iValsqsum = Utilities::fnCalcSumOfs($this->aNofs, $this->oSbuf, $iPq);
+    
+    $fArea = $this->oNormrect->fnArea();
+    $fNf = $fArea * $iValsqsum - (float) $iValsum * $iValsum;
+    
+    if ($fNf > 0.) {
+      $fNf = sqrt($fNf);
+      $this->fVarianceNormFactor = 1./$fNf;
+      return $fArea*fVarianceNormFactor < 1e-1;
+    } else {
+      $this->fVarianceNormFactor = 1.;
+      return false;
+    }
     /*
     pwin = &sbuf.at<int>(pt) + $oS->aLayer_ofs;
     const int* pq = (const int*)(pwin + sqofs);

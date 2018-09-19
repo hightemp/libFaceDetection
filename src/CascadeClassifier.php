@@ -214,7 +214,7 @@ class CascadeClassifier
               array_push($aLevelWeights, $fGypWeight);
               //mtx->unlock();
             }
-          } else if($iResult > 0) {
+          } else if ($iResult > 0) {
             //mtx->lock();
             array_push(
               $aObjects, 

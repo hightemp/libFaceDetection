@@ -21,12 +21,12 @@ class Rect
   
   public function fnArea()
   {
-    
+    return $this->width*$this->height;
   }
   
   public function fnSize()
   {
-    
+    return [ 'width' => $this->width, 'height' => $this->height ];
   }
 }
 

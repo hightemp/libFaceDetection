@@ -177,31 +177,31 @@ class FeatureEvaluator
     
     if ($bRecalcOptFeatures) {
       $this->fnComputeOptFeatures();
-      fnCopyVectorToUMat($this->aScaleData, $this->aUscaleData);
+      Utilities::fnCopyVectorToUMat($this->aScaleData, $this->aUscaleData);
     }
 
     if ($oImage->fnIsUMat() && $this->aLocalSize['width']*$this->aLocalSize['height'] > 0) {
-      $this->oUsbuf->fnCreate($this->aSbufSize['height']*$this->iNchannels, $this->aSbufSize['width'], CV_32S);
-      $this->oUrbuf->fnCreate($aSz0, CV_8U);
+      $this->oUsbuf->fnCreate($this->aSbufSize['height']*$this->iNchannels, $this->aSbufSize['width'], Utilities::CV_32S);
+      $this->oUrbuf->fnCreate($aSz0, Utilities::CV_8U);
 
       for ($iI = 0; $iI < $iNscales; $iI++) {
         $oS = $this->aScaleData[$iI];
         $oDst = new UMat($this->oUsbuf, new Rect(0, 0, $oS->szi['width'] - 1, $oS->szi['height'] - 1));
         //UMat dst(urbuf, Rect(0, 0, s.szi.width - 1, s.szi.height - 1));
         resize($oImage, $oDst, $oDst->fnSize(), 1. / $oS->scale, 1. / $oS->scale, INTER_LINEAR_EXACT);
-        computeChannels($iI, $oDst);
+        $this->fnComputeChannels($iI, $oDst);
       }
       $this->iSbufFlag = self::USBUF_VALID;
     } else {
       $oNewImage = $oImage->fnGetMat();
-      $this->oSbuf->fnCreate($this->aSbufSize['height']*$this->iNchannels, $this->aSbufSize['width'], CV_32S);
-      $this->oRbuf->fnCreate($aSz0, CV_8U);
+      $this->oSbuf->fnCreate($this->aSbufSize['height']*$this->iNchannels, $this->aSbufSize['width'], Utilities::CV_32S);
+      $this->oRbuf->fnCreate($aSz0, Utilities::CV_8U);
 
       for ($iI = 0; $iI < $iNscales; $iI++) {
         $oS = $this->aScaleData[$iI];
-        $oDst = new Mat($oS->szi['height'] - 1, $oS->szi['width'] - 1, CV_8U, $this->oRbuf);
+        $oDst = new Mat($oS->szi['height'] - 1, $oS->szi['width'] - 1, Utilities::CV_8U, $this->oRbuf);
         resize($oNewImage, $oDst, $oDst->fnSize(), 1. / $oS->scale, 1. / $oS->scale, INTER_LINEAR_EXACT);
-        computeChannels($iI, $oDst);
+        $this->fnComputeChannels($iI, $oDst);
       }
       $this->iSbufFlag = self::SBUF_VALID;
     }

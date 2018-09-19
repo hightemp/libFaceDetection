@@ -40,6 +40,12 @@ class InputArray
       
       $this->oObj = new Mat($iCols, $iRows);
       
+      for ($iY=0; $iY<imagesy($aArguments[0]); $iY++) {
+        for ($iX=0; $iX<imagesx($aArguments[0]); $iX++) {
+          $this->oObj->aData[$iY*$iRows+$iX] = imagecolorat($aArguments[0], $iX, $iY);
+        }
+      }
+      
       $this->iFlags = self::MAT;
     }
   }
@@ -80,12 +86,17 @@ class InputArray
   
   public function fnGetMat($iIdx=-1)
   {
-    
+    return $this->oObj;
   }
 
   public function fnIsMat()
   {
     return $this->fnKind() == self::MAT;
+  }
+
+  public function fnIsUMat()
+  {
+    return $this->fnKind() == self::UMAT;
   }
   /*
   Mat getMat_(int idx=-1) const;
